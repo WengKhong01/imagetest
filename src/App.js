@@ -1,5 +1,5 @@
 import './App.css';
-import ReactS3 from '.././node_modules/react-s3';
+import ReactS3 from 'react-s3';
 
 const accessKeyId = process.env.REACT_APP_aws_access_key;
 const secretAccessKey = process.env.REACT_APP_aws_secret_key;
@@ -21,8 +21,8 @@ function App() {
         </h1>
         <input id= "img" type = "file" onChange = {upload}/>
         <div><img id= "show" alt="your uploaded image" style={{'max-height':'20vw'}}></img></div>
-        <h2 id="titlelink" style={{display:'none'}}>Your bitly link : </h2>
-        <a id="bit" href=""></a>
+        <h2 id="titlelink"></h2>
+        <a id="bit"></a>
       </div>
     </div>
     
@@ -34,6 +34,10 @@ function upload(e){
   console.log(e.target.files[0]);
   var shower = document.getElementById('show');
   shower.src = URL.createObjectURL(e.target.files[0]);
+  var x = document.getElementById("titlelink")
+  var y = document.getElementById("bit")
+  y.innerHTML = "";
+  x.innerHTML = "loading";
   ReactS3.uploadFile(e.target.files[0], config).then((data)=>{
     console.log(data.location);
     shortenLink(data.location)
@@ -59,15 +63,36 @@ async function shortenLink(url){
 
   const request = new Request('https://api-ssl.bitly.com/v4/shorten',options)
 
-  const response = await fetch(request);
+  const response = await fetchRetry(request);
 
   response.json().then(data=>{
+    console.log(data)
     var y = document.getElementById("bit")
     var x = document.getElementById("titlelink")
-    x.style.display = "";
+    x.innerHTML = "Your bitly link :";
     y.href = data['link']
     y.innerHTML = data['link']
   });
+  
+
+  
+}
+
+function fetchRetry(url,options, retries = 3){
+
+  return fetch(url,options).then(response => {
+    if (response.ok){
+      return response
+    } 
+    
+    if (retries > 0){
+      return fetchRetry(url,options,retries-1)
+    } else {
+      throw new Error(response)
+    }
+    
+  }).catch(console.error)
+
 }
 
 export default App;
